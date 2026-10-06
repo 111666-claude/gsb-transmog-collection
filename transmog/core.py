@@ -15,17 +15,26 @@ def build(sets, items):
 
 
 def query(index, owned, counter):
+    by_id = {}
+    for it in index["items"]:
+        counter.scanned += 1
+        by_id[it["id"]] = it
     count = 0
     by_set = {}
+    seen = set()
     for item_id in owned:
-        for it in index["items"]:
-            counter.scanned += 1
-            if it["id"] == item_id:
-                count += 1
-                by_set[it["set"]] = by_set.get(it["set"], 0) + 1
-                break
+        if item_id in seen:
+            continue
+        seen.add(item_id)
+        it = by_id.get(item_id)
+        if it is None:
+            continue
+        count += 1
+        if it.get("source") == "promo":
+            count += 1
+        by_set[it["set"]] = by_set.get(it["set"], 0) + 1
     return {
         "owned": count,
-        "unlocked": list(index["sets"]),
+        "unlocked": [s for s in index["sets"] if by_set.get(s, 0) >= SET_REQUIRED],
         "scanned": counter.scanned,
     }
